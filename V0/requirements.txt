@@ -1,0 +1,3 @@
+# v0/requirements.txt
+bit==0.8.0
+bitcoinlib==
