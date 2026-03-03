@@ -14,7 +14,7 @@ import gc
 from bit import Key as BitKey
 from bit import PrivateKeyTestnet
 from bit.network import NetworkAPI
-from bit.format import address_to_scriptpubkey
+from bit.format import get_version
 
 # Imports for cryptography
 from cryptography.hazmat.primitives import hashes
@@ -38,7 +38,7 @@ def set_owner_only_permissions(path: str) -> None:
 
 def is_valid_btc_address(addr: str) -> bool:
     try:
-        address_to_scriptpubkey(addr)  # will decode and fail on invalid format
+        get_version(addr)  # will decode and fail on invalid format
         return True
     except Exception:
         return False
