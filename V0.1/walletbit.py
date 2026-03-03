@@ -7,11 +7,14 @@ import sys
 import base64
 import getpass
 import requests
-import traceback
+import ctypes
+import gc
 
 # Import for the 'bit' library - handles all key/tx operations
 from bit import Key as BitKey
 from bit import PrivateKeyTestnet
+from bit.network import NetworkAPI
+from bit.format import address_to_scriptpubkey
 
 # Imports for cryptography
 from cryptography.hazmat.primitives import hashes
@@ -23,15 +26,42 @@ from cryptography.hazmat.backends import default_backend
 # UTILS
 # =======================
 
-# No longer needed, bit uses 'testnet' or mainnet (default)
-# def map_network(user_network):
-#     if user_network == 'mainnet':
-#         return 'bitcoin'
-#     return user_network
+def set_owner_only_permissions(path: str) -> None:
+    """
+    Best-effort: set file perms to owner read/write only (0600) on Unix.
+    On Windows this may do nothing useful; we ignore failures.
+    """
+    try:
+        os.chmod(path, 0o600)
+    except Exception:
+        pass
+
+def is_valid_btc_address(addr: str) -> bool:
+    try:
+        address_to_scriptpubkey(addr)  # will decode and fail on invalid format
+        return True
+    except Exception:
+        return False
+    
+def mask_wif(wif_text: str, show_start: int = 4, show_end: int = 4) -> str:
+    if len(wif_text) <= show_start + show_end:
+        return "*" * len(wif_text)
+    return f"{wif_text[:show_start]}{'*' * (len(wif_text) - show_start - show_end)}{wif_text[-show_end:]}"
+
+def secure_zero_bytearray(b: bytearray) -> None:
+    # Overwrite the bytearray in place
+    for i in range(len(b)):
+        b[i] = 0
+
+    # Extra attempt: ask libc memset to overwrite the same buffer
+    # (Not a guarantee, but harmless.)
+    buf = (ctypes.c_char * len(b)).from_buffer(b)
+    ctypes.memset(ctypes.addressof(buf), 0, len(b))
+
 
 def get_wallet_file(network, name):
     home = os.path.expanduser("~")
-    filename = f".thesis_wallet_{network}_{name}.key"
+    filename = f".wallet_{network}_{name}.key"
     return os.path.join(home, filename)
 
 def validate_name(name):
@@ -88,6 +118,7 @@ def generate_wallet(network):
     wallet_file = get_wallet_file(network, name)
     with open(wallet_file, "wb") as f:
         f.write(salt + encrypted_wif)
+    set_owner_only_permissions(wallet_file)
 
     print(f"\n✅ New wallet saved: {wallet_file}")
     # Get address from bit key
@@ -135,6 +166,7 @@ def import_key(network):
     wallet_file = get_wallet_file(network, name)
     with open(wallet_file, "wb") as f:
         f.write(salt + encrypted_wif)
+    set_owner_only_permissions(wallet_file)
 
     print(f"\n✅ Imported private key saved as: {wallet_file}")
 
@@ -165,8 +197,9 @@ def load_wif_from_file(network):
     try:
         derived_key = derive_key(password, salt)
         fernet = Fernet(derived_key)
-        wif = fernet.decrypt(encrypted_data).decode()
-        return wif, name
+        wif_ba = bytearray(fernet.decrypt(encrypted_data))
+        del derived_key, data, encrypted_data, salt
+        return wif_ba, name
     except (InvalidToken, UnicodeDecodeError):
         print("\n❌ Wrong passphrase! Decryption failed.")
         return None, None
@@ -178,25 +211,57 @@ def load_wif_from_file(network):
 
 def load_key(network):
     print("\n🔓 Load Wallet")
-    wif, name = load_wif_from_file(network)
-    if not wif:
+    wif_ba, name = load_wif_from_file(network)
+    if not wif_ba:
         return
-        
-    # --- BIT REPLACEMENT ---
+    key = None
     try:
-        if network == 'testnet':
-            key = PrivateKeyTestnet(wif)
-        else:
-            key = BitKey(wif)
-    except Exception as e:
-        print(f"❌ Error loading WIF into 'bit' library: {e}")
-        return
-    # --- END REPLACEMENT ---
+        # Decode only for the moment you must (bit library needs str)
+        wif_str = wif_ba.decode("utf-8")
 
-    print(f"\n✅ Loaded wallet: {name}")
-    print(f"Private Key (WIF): {wif}")
-    # Get address from bit key
-    print(f"Address: {key.address}")
+        try:
+            if network == 'testnet':
+                key = PrivateKeyTestnet(wif_str)
+            else:
+                key = BitKey(wif_str)
+        except Exception as e:
+            print(f"❌ Error loading WIF into 'bit' library: {e}")
+            return
+        finally:
+            # Reduce lifetime of decoded string reference
+            del wif_str
+
+        print(f"\n✅ Loaded wallet: {name}")
+        print("\n⚠️  WARNING: Showing your private key can let anyone steal your funds.")
+
+        confirm1 = input("Type FULL to begin full reveal, or press Enter to cancel: ").strip().upper()
+        if confirm1 == "FULL":
+            confirm2 = input("Type I UNDERSTAND to confirm: ").strip().upper()
+            if confirm2 == "I UNDERSTAND":
+                # Presence check: require last 4 chars
+                last4 = wif_ba.decode("utf-8")[-4:]
+                confirm3 = input("Type the LAST 4 characters: ").strip()
+                if confirm3 == last4:
+                    print("Private Key (WIF): " + wif_ba.decode("utf-8"))
+                else:
+                    print("❌ Check failed. Private key not shown.")
+                del last4, confirm3
+            else:
+                print("✅ Private key not shown.")
+        else:
+            print("✅ Private key not shown.")
+
+        print(f"Address: {key.address}")
+
+    finally:
+        # Best-effort wipe the decrypted WIF bytes no matter what
+        try:
+            secure_zero_bytearray(wif_ba)
+        except Exception:
+            pass
+        del wif_ba
+        gc.collect()
+        
 
 
 # =======================
@@ -205,24 +270,27 @@ def load_key(network):
 
 def show_address(network):
     print("\n📬 Show Wallet Address")
-    wif, name = load_wif_from_file(network)
-    if not wif:
+    wif_ba, name = load_wif_from_file(network)
+    if not wif_ba:
         return
         
-    # --- BIT REPLACEMENT ---
     try:
-        if network == 'testnet':
-            key = PrivateKeyTestnet(wif)
-        else:
-            key = BitKey(wif)
+        # Decode only for the moment you must (bit library needs str)
+        wif_str = wif_ba.decode("utf-8")
+        try:
+            key = PrivateKeyTestnet(wif_str) if network == "testnet" else BitKey(wif_str)
+        finally:
+            del wif_str
+        print(f"\n✅ Wallet: {name}")
+        print(f"Address: {key.address}")
     except Exception as e:
-        print(f"❌ Error loading WIF into 'bit' library: {e}")
-        return
-    # --- END REPLACEMENT ---
-
-    print(f"\n✅ Wallet: {name}")
-    # Get address from bit key
-    print(f"Address: {key.address}")
+            print(f"❌ Error loading WIF into 'bit' library: {e}")
+            return
+    finally:
+        secure_zero_bytearray(wif_ba)
+        del wif_ba
+        gc.collect()
+    
 
 
 # =======================
@@ -231,43 +299,44 @@ def show_address(network):
 
 def check_balance(network):
     print("\n💰 Check Wallet Balance")
-    wif, name = load_wif_from_file(network)
-    if not wif:
+    wif_ba, name = load_wif_from_file(network)
+    if not wif_ba:
         return
         
-    # --- BIT REPLACEMENT ---
     try:
-        if network == 'testnet':
-            key = PrivateKeyTestnet(wif)
-        else:
-            key = BitKey(wif)
-        # Get address from bit key
-        address = key.address
-    except Exception as e:
-        print(f"❌ Error loading WIF into 'bit' library: {e}")
-        return
-    # --- END REPLACEMENT ---
-
-    print(f"\n✅ Wallet: {name}")
-    print(f"Address: {address}")
+        # Decode only for the moment you must (bit library needs str)
+        wif_str = wif_ba.decode("utf-8")
+        try:
+            key = PrivateKeyTestnet(wif_str) if network == "testnet" else BitKey(wif_str)
+        finally:
+            del wif_str
+        print(f"\n✅ Wallet: {name}")
+        print(f"Address: {key.address}")
 
     # Blockstream API
-    if network == 'testnet':
-        url = f"https://blockstream.info/testnet/api/address/{address}"
-    else:
-        url = f"https://blockstream.info/api/address/{address}"
+        if network == 'testnet':
+            url = f"https://blockstream.info/testnet/api/address/{key.address}"
+        else:
+            url = f"https://blockstream.info/api/address/{key.address}"
 
-    try:
-        resp = requests.get(url)
-        resp.raise_for_status() # Raise error for bad responses (4xx, 5xx)
-        data = resp.json()
-        confirmed = data.get('chain_stats', {}).get('funded_txo_sum', 0) - data.get('chain_stats', {}).get('spent_txo_sum', 0)
-        confirmed_btc = confirmed / 1e8
-        print(f"✅ Confirmed Balance: {confirmed_btc:.8f} BTC")
-    except requests.exceptions.HTTPError as http_err:
-        print(f"❌ HTTP error fetching balance: {http_err}")
+        try:
+            resp = requests.get(url)
+            resp.raise_for_status() # Raise error for bad responses (4xx, 5xx)
+            data = resp.json()
+            confirmed = data.get('chain_stats', {}).get('funded_txo_sum', 0) - data.get('chain_stats', {}).get('spent_txo_sum', 0)
+            confirmed_btc = confirmed / 1e8
+            print(f"✅ Confirmed Balance: {confirmed_btc:.8f} BTC")
+        except requests.exceptions.HTTPError as http_err:
+            print(f"❌ HTTP error fetching balance: {http_err}")
+        except Exception as e:
+            print(f"❌ Error fetching balance: {e}")
     except Exception as e:
-        print(f"❌ Error fetching balance: {e}")
+            print(f"❌ Error loading WIF into 'bit' library: {e}")
+            return
+    finally:
+        secure_zero_bytearray(wif_ba)
+        del wif_ba
+        gc.collect()
 
 
 # =======================
@@ -276,14 +345,18 @@ def check_balance(network):
 
 def send_transaction(network):
     print("\n🚀 Send Transaction")
-    wif, name = load_wif_from_file(network)
-    if not wif:
+    wif_ba, name = load_wif_from_file(network)
+    if not wif_ba:
         return
 
     print(f"\n✅ Sending from wallet: {name}")
 
     print("\n🟣 Enter recipient details")
     to_address = input("Recipient Bitcoin address: ").strip()
+    if not is_valid_btc_address(to_address):
+        print("\n❌ Invalid recipient address entered.")
+        return
+
     try:
         amount_btc_str = input("Amount to send (in BTC): ").strip()
         amount_btc = float(amount_btc_str)
@@ -299,32 +372,51 @@ def send_transaction(network):
 
     print("\n🛠️ Building transaction...")
     try:
-        tx_hex = build_and_sign_tx_with_bit(wif, to_address, amount_btc, fee_sat_per_byte, network)
+        wif_str = wif_ba.decode("utf-8")
+        try:
+            tx_hex = build_and_sign_tx_with_bit(wif_str, to_address, amount_btc, fee_sat_per_byte, network)
+        finally:
+            del wif_str
+            
         if not tx_hex:
             return
     except Exception as e:
         print(f"❌ Error building transaction: {e}")
-        traceback.print_exc()
         return
+    finally:
+        secure_zero_bytearray(wif_ba)
+        del wif_ba
+        gc.collect()
+
 
     print(f"✅ TX hex to broadcast: {tx_hex}")
-    print("\n🌐 Broadcasting transaction...")
+    # ---- Confirm before broadcast ----
+    print("\n📄 Transaction ready to broadcast")
+    print(f"Network:   {network}")
+    print(f"To:        {to_address}")
+    print(f"Amount:    {amount_btc:.8f} BTC")
+    print(f"Fee rate:  {fee_sat_per_byte} sat/byte")
+    print(f"Raw TX:    {tx_hex[:32]}...{tx_hex[-32:]}")  # preview only (not full spam)
 
-    if network == 'testnet':
-        push_url = "https://blockstream.info/testnet/api/tx"
-    else:
-        push_url = "https://blockstream.info/api/tx"
+    # Strong confirmation to prevent accidents
+    confirm = input("\nType 'broadcast' to send, or anything else to cancel: ").strip().lower()
+    if confirm != "broadcast":
+        print("❎ Broadcast cancelled.")
+        return
+
+    # Pick endpoint once
     try:
-        resp = requests.post(push_url, data=tx_hex, timeout=15)
-        if resp.status_code == 200:
-            print("✅ Transaction broadcast successfully!")
-            print(f"🔗 TXID: {resp.text.strip()}")
+        if network == "testnet":
+            txid = NetworkAPI.broadcast_tx_testnet(tx_hex)
         else:
-            print(f"❌ Broadcast failed with HTTP {resp.status_code}: {resp.text.strip()}")
-    except requests.exceptions.Timeout:
-        print("❌ Error: Broadcast request timed out. Please try again.")
-    except requests.exceptions.RequestException as e:
-        print(f"❌ Network error during broadcast: {e}")
+            txid = NetworkAPI.broadcast_tx(tx_hex)
+
+        if txid:
+            print("✅ Transaction broadcast successfully!")
+            print(f"🔗 TXID: {txid}")
+
+    except Exception as e:
+        print(f"❌ Broadcast failed via bit: {e}")
 
 
 # =========================================================
@@ -389,7 +481,6 @@ def main():
         sys.exit(0)
     except Exception as e:
         print(f"\n❌ An unexpected error occurred: {e}")
-        traceback.print_exc()
         sys.exit(1)
 
 
