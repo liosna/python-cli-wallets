@@ -56,7 +56,11 @@ def send(args):
         KeyClass = get_key_class(args.testnet)
         k = KeyClass(args.wif)
         # bit library handles fee estimation and utxo selection automatically
-        tx_hash = k.send([(args.dest, args.amount, 'btc')])
+        if args.fee is not None:
+             tx_hash = k.send([(args.dest, args.amount, 'btc')], fee=args.fee)
+        else:
+             tx_hash = k.send([(args.dest, args.amount, 'btc')])
+             
         print(f"Transaction sent! Hash: {tx_hash}")
     except Exception as e:
         print(f"Error sending transaction: {e}")
@@ -135,6 +139,7 @@ def main():
     parser_send.add_argument('wif', help='Sender Wallet Import Format (WIF) key')
     parser_send.add_argument('dest', help='Destination address')
     parser_send.add_argument('amount', type=float, help='Amount in BTC')
+    parser_send.add_argument('--fee', type=int, help='Custom fee rate in sat/byte (optional; if omitted, bit will estimate)')
     parser_send.set_defaults(func=send)
 
     # history
