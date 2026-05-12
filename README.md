@@ -1,4 +1,4 @@
-# Secure Python CLI Wallets
+# Python CLI Wallets
 
 Companion code for the MSc thesis *Design and Validation of a Security Evaluation Framework for Python CLI Wallets* (Bahçeşehir University, 2026).
 
