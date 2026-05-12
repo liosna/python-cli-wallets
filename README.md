@@ -30,7 +30,7 @@ Each prototype is self-contained. To run one:
 ```bash
 cd V3/bitcoinlib
 pip install -r requirements.txt
-python wallet.py --help
+python wallet_name.py --help
 ```
 
 Replace the path with whichever version and library you want to inspect.
