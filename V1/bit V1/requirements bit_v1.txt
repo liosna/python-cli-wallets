@@ -1,0 +1,18 @@
+# bit_v1 wallet — pinned dependencies (D1: version pinning).
+#
+# All packages are pinned with == to exact versions. This satisfies the
+# checklist's score-1 criterion (version pinned but no cryptographic
+# hash). Hash pinning (score 2) is intentionally NOT used to keep the
+# overall security score within the Basic maturity range.
+#
+# To install reproducibly:
+#     pip install -r requirements.txt
+#
+# Dependency tree:
+#   bit ── coincurve ── (libsecp256k1 native)
+#       └─ requests
+#   cryptography  (used for AES-GCM / PBKDF2-HMAC-SHA256 in keystore)
+
+bit==0.8.0
+coincurve==21.0.0
+cryptography==46.0.6

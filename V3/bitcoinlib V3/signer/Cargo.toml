@@ -1,0 +1,23 @@
+[package]
+name = "bitcoin-signer"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "bitcoin_signer"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3          = { version = "0.22", features = ["extension-module", "abi3", "abi3-py310"] }
+k256          = { version = "0.13", features = ["ecdsa", "arithmetic"] }
+zeroize       = { version = "1.8",  features = ["derive", "alloc"] }
+aes-gcm       = "0.10"
+pbkdf2        = { version = "0.12", features = [] }
+sha2          = "0.10"
+rand_core     = { version = "0.6",  features = ["getrandom"] }
+bs58          = { version = "0.5",  features = ["check"] }
+hmac          = "0.12"
+
+[profile.release]
+opt-level = 3
+lto = true

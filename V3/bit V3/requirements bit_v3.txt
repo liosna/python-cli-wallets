@@ -1,0 +1,43 @@
+# bit_v3 wallet — hash-pinned dependencies (D1: cryptographic hash verification).
+#
+# All direct packages are pinned with == and --hash=sha256:... so that
+# `pip install --require-hashes` verifies the cryptographic integrity of each
+# distribution before installation.
+#
+# New dependency vs. V2:
+#   mnemonic==0.21  — BIP-39 mnemonic generation and seed derivation (K4)
+#
+# Hashes computed on macOS (Apple Silicon / x86_64); wheels are platform-
+# specific for coincurve and cryptography.  Re-generate for your platform:
+#
+#     pip download bit==0.8.0 coincurve==21.0.0 cryptography==46.0.7 \
+#         requests==2.33.1 mnemonic==0.21 \
+#         --no-deps -d /tmp/deps
+#     pip hash /tmp/deps/*.whl /tmp/deps/*.tar.gz
+#
+# To install with hash verification:
+#     pip install --require-hashes -r requirements_v3.txt
+#
+# Dependency tree:
+#   bit ── coincurve ── (libsecp256k1 via cffi)
+#       └─ requests
+#   cryptography  (AES-GCM / PBKDF2-HMAC-SHA256 for keystore)
+#   mnemonic      (BIP-39 mnemonic generation and seed derivation — K4)
+#
+# pip-audit is an optional scanning dependency (D2); install separately:
+#   pip install pip-audit
+
+bit==0.8.0 \
+    --hash=sha256:059b4f8905359576ecb09c7bc9e5e266532b820179c625e39a501a21867f2c83
+
+coincurve==21.0.0 \
+    --hash=sha256:65ec42cab9c60d587fb6275c71f0ebc580625c377a894c4818fb2a2b583a184b
+
+cryptography==46.0.7 \
+    --hash=sha256:ea42cbe97209df307fdc3b155f1b6fa2577c0defa8f1f7d3be7d31d189108ad4
+
+requests==2.33.1 \
+    --hash=sha256:4e6d1ef462f3626a1f0a0a9c42dd93c63bad33f9f1c1937509b8c5c8718ab56a
+
+mnemonic==0.21 \
+    --hash=sha256:72dc9de16ec5ef47287237b9b6943da11647a03fe7cf1f139fc3d7c4a7439288

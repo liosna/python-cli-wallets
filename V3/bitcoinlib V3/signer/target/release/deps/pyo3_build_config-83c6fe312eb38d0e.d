@@ -1,0 +1,14 @@
+/Users/salimbenkhadija/Desktop/proto2/signer/target/release/deps/pyo3_build_config-83c6fe312eb38d0e.d: /Users/salimbenkhadija/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pyo3-build-config-0.22.6/src/lib.rs /Users/salimbenkhadija/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pyo3-build-config-0.22.6/src/errors.rs /Users/salimbenkhadija/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pyo3-build-config-0.22.6/src/impl_.rs /Users/salimbenkhadija/Desktop/proto2/signer/target/release/build/pyo3-build-config-ed64376984340067/out/pyo3-build-config-file.txt /Users/salimbenkhadija/Desktop/proto2/signer/target/release/build/pyo3-build-config-ed64376984340067/out/pyo3-build-config.txt
+
+/Users/salimbenkhadija/Desktop/proto2/signer/target/release/deps/libpyo3_build_config-83c6fe312eb38d0e.rlib: /Users/salimbenkhadija/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pyo3-build-config-0.22.6/src/lib.rs /Users/salimbenkhadija/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pyo3-build-config-0.22.6/src/errors.rs /Users/salimbenkhadija/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pyo3-build-config-0.22.6/src/impl_.rs /Users/salimbenkhadija/Desktop/proto2/signer/target/release/build/pyo3-build-config-ed64376984340067/out/pyo3-build-config-file.txt /Users/salimbenkhadija/Desktop/proto2/signer/target/release/build/pyo3-build-config-ed64376984340067/out/pyo3-build-config.txt
+
+/Users/salimbenkhadija/Desktop/proto2/signer/target/release/deps/libpyo3_build_config-83c6fe312eb38d0e.rmeta: /Users/salimbenkhadija/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pyo3-build-config-0.22.6/src/lib.rs /Users/salimbenkhadija/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pyo3-build-config-0.22.6/src/errors.rs /Users/salimbenkhadija/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pyo3-build-config-0.22.6/src/impl_.rs /Users/salimbenkhadija/Desktop/proto2/signer/target/release/build/pyo3-build-config-ed64376984340067/out/pyo3-build-config-file.txt /Users/salimbenkhadija/Desktop/proto2/signer/target/release/build/pyo3-build-config-ed64376984340067/out/pyo3-build-config.txt
+
+/Users/salimbenkhadija/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pyo3-build-config-0.22.6/src/lib.rs:
+/Users/salimbenkhadija/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pyo3-build-config-0.22.6/src/errors.rs:
+/Users/salimbenkhadija/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pyo3-build-config-0.22.6/src/impl_.rs:
+/Users/salimbenkhadija/Desktop/proto2/signer/target/release/build/pyo3-build-config-ed64376984340067/out/pyo3-build-config-file.txt:
+/Users/salimbenkhadija/Desktop/proto2/signer/target/release/build/pyo3-build-config-ed64376984340067/out/pyo3-build-config.txt:
+
+# env-dep:CARGO_PKG_VERSION=0.22.6
+# env-dep:OUT_DIR=/Users/salimbenkhadija/Desktop/proto2/signer/target/release/build/pyo3-build-config-ed64376984340067/out
