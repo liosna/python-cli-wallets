@@ -16,15 +16,7 @@ This repository contains eight Bitcoin wallet prototypes that demonstrate the pr
 | V3     | bit        | Non-HD       | Final hardened non-HD                |
 | V3     | bitcoinlib | HD           | Final hardened HD                    |
 
-Each folder (`V0/`, `V1/`, `V2/`, `V3/`) contains two subfolders, one per library:
 
-V0/
-├── bit/
-└── bitcoinlib/
-V1/
-├── bit/
-└── bitcoinlib/
-...
 
 ## Requirements
 
